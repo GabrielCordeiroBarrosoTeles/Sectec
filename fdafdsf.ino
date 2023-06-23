@@ -65,6 +65,9 @@ void loop() {
   // Verifica o status dos sensores e atualiza as variáveis correspondentes
   isRainy = (analogRead(rainSensorPin) < 55);  // Altere o valor do limiar conforme necessário
   weightValue = scale.get_units() / 1000.0;      // Valor do peso em Kg
+  if (weightValue < 0) {
+    weightValue = 0; // Define o valor como zero se for negativo
+  }
 
   // Zera o contador de detecções
   proximityCount = 0;
@@ -86,7 +89,7 @@ void loop() {
   Serial.print("Sensor de Proximidade Infravermelho (Detecções): ");
   Serial.println(proximityCount);
   Serial.print("Sensor de Peso: ");
-  Serial.println(weightValue);
+  Serial.println(weightValue >= 0 ? String(weightValue) + " kg" : "0 kg");
 
   // Lida com as requisições do cliente na página web
   EthernetClient client = server.available();
@@ -137,7 +140,7 @@ void handleClientRequest(EthernetClient client) {
   client.println("<h2>Sensor de Proximidade Infravermelho:</h2>");
   client.println("<p>Detecções: " + String(proximityCount) + "</p>");
   client.println("<h2>Sensor de Peso:</h2>");
-  client.println(String(weightValue) + " kg");
+  client.println(weightValue >= 0 ? String(weightValue) + " kg" : "0 kg");
   client.println("<h2>LED:</h2>");
   client.println("<form action='/ligar' method='POST'><button type='submit'>Ligar</button></form>");
   client.println("<form action='/desligar' method='POST'><button type='submit'>Desligar</button></form>");
