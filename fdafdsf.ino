@@ -130,6 +130,7 @@ void handleClientRequest(EthernetClient client) {
   client.println("<body style=background-color:#ADD8E6>");
   client.println("<h1>Monitoramento de Sensores</h1>");
   client.println("<h2>Sensor de Chuva:</h2>");
+  client.println(String(rainSensorPin) + " valor");
   client.println(isRainy ? "<p>Está molhado!</p>" : "<p>Está seco!</p>");
   client.println("<h2>Sensor de Proximidade Ultrassônico:</h2>");
   client.println(String(getUltrasonicDistance()) + " cm");
