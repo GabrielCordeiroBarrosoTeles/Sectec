@@ -4,14 +4,14 @@
 #include <HX711.h>
 
 // Definição dos pinos
-const int rainSensorPin = A0;        // Pino analógico para o sensor de chuva
-const int ultrasonicTrigPin = 2;     // Pino de saída do sinal de disparo do sensor ultrassônico
-const int ultrasonicEchoPin = 3;     // Pino de entrada do sinal de eco do sensor ultrassônico
-const int infraredSensorPin = 4;     // Pino de entrada do sensor de proximidade infravermelho
-const int ledPin = 7;                // Pino para o LED
-const int buttonPin = 8;             // Pino para o botão
-const int HX711_DT_PIN = 6;          // Pino de dados do módulo HX711
-const int HX711_SCK_PIN = 5;         // Pino de clock do módulo HX711
+const int rainSensorPin = A0;          // Pino analógico para o sensor de chuva
+const int ultrasonicTrigPin = 2;      // Pino de saída do sinal de disparo do sensor ultrassônico
+const int ultrasonicEchoPin = 3;      // Pino de entrada do sinal de eco do sensor ultrassônico
+const int infraredSensorPin = A1;     // Pino de entrada do sensor de proximidade infravermelho
+const int ledPin = 7;                 // Pino para o LED
+const int buttonPin = 8;              // Pino para o botão
+const int HX711_DT_PIN = 6;           // Pino de dados do módulo HX711
+const int HX711_SCK_PIN = 5;          // Pino de clock do módulo HX711
 
 // Configuração da conexão Ethernet
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };    // Endereço MAC do Ethernet Shield
@@ -23,7 +23,7 @@ bool isRainy = false;
 int proximityCount = 0;
 float weightValue = 0.0;
 bool ledStatus = false;
-float calibration_factor = 48011.00;
+float calibration_factor = 1.0;
 
 // Objeto NewPing
 NewPing sonar(ultrasonicTrigPin, ultrasonicEchoPin);
@@ -49,7 +49,7 @@ void setup() {
   // Inicialização do módulo HX711
   scale.begin(HX711_DT_PIN, HX711_SCK_PIN);
   scale.set_scale(calibration_factor);  // Fator de calibração para a sua configuração específica
-  scale.tare();         // Tare a escala (subtraia o peso atual do valor de referência)
+  scale.tare();                         // Tare a escala (subtraia o peso atual do valor de referência)
 
   // Aguarda estabilidade do sensor
   delay(1000);
@@ -63,21 +63,17 @@ void loop() {
   }
 
   // Verifica o status dos sensores e atualiza as variáveis correspondentes
-  isRainy = (analogRead(rainSensorPin) < 55);  // Altere o valor do limiar conforme necessário
-  weightValue = scale.get_units() / 1000.0;      // Valor do peso em Kg
+  isRainy = (analogRead(rainSensorPin) < 800);  // Altere o valor de referência de acordo com o sensor de chuva utilizado
+
+  // Atualiza o valor do peso em gramas
+  weightValue = scale.get_units() * 1000.0;     // Valor do peso em gramas
   if (weightValue < 0) {
     weightValue = 0; // Define o valor como zero se for negativo
   }
 
-  // Zera o contador de detecções
-  proximityCount = 0;
-
   // Conta as detecções do sensor de proximidade infravermelho
-  for (int i = 0; i < 2000; i++) {
-    if (digitalRead(infraredSensorPin) == LOW) {
-      proximityCount++;
-    }
-    delay(10);
+  if (digitalRead(infraredSensorPin) == LOW) {
+    proximityCount++;
   }
 
   // Imprime os valores dos sensores na porta serial
@@ -89,7 +85,7 @@ void loop() {
   Serial.print("Sensor de Proximidade Infravermelho (Detecções): ");
   Serial.println(proximityCount);
   Serial.print("Sensor de Peso: ");
-  Serial.println(weightValue >= 0 ? String(weightValue) + " kg" : "0 kg");
+  Serial.println(weightValue >= 0 ? String(weightValue) + " g" : "0 g");
 
   // Lida com as requisições do cliente na página web
   EthernetClient client = server.available();
@@ -140,16 +136,22 @@ void handleClientRequest(EthernetClient client) {
   client.println("<h2>Sensor de Proximidade Infravermelho:</h2>");
   client.println("<p>Detecções: " + String(proximityCount) + "</p>");
   client.println("<h2>Sensor de Peso:</h2>");
-  client.println(weightValue >= 0 ? String(weightValue) + " kg" : "0 kg");
-  client.println("<h2>LED:</h2>");
-  client.println("<form action='/ligar' method='POST'><button type='submit'>Ligar</button></form>");
-  client.println("<form action='/desligar' method='POST'><button type='submit'>Desligar</button></form>");
-  client.println("<p>Status: " + String(ledStatus ? "Ligado" : "Desligado") + "</p>");
-  client.println("</body></html>");
+  client.println("<p>" + String(weightValue >= 0 ? weightValue : 0) + " g</p>");
+  client.println("<h2>Controle do LED:</h2>");
+  client.println("<form method='post' action='/ligar'>");
+  client.println("<input type='submit' value='Ligar'>");
+  client.println("</form>");
+  client.println("<form method='post' action='/desligar'>");
+  client.println("<input type='submit' value='Desligar'>");
+  client.println("</form>");
+  client.println("</body>");
+  client.println("</html>");
 }
 
-float getUltrasonicDistance() {
-  unsigned int duration = sonar.ping_cm();
-  int distance = duration;
+int getUltrasonicDistance() {
+  unsigned int distance = sonar.ping_cm();
+  if (distance == 0) {
+    distance = 400; // Define um valor máximo caso não seja possível obter a leitura correta
+  }
   return distance;
 }
