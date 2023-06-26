@@ -9,6 +9,7 @@ const int ultrasonicTrigPin = 2;      // Pino de saída do sinal de disparo do s
 const int ultrasonicEchoPin = 3;      // Pino de entrada do sinal de eco do sensor ultrassônico
 const int infraredSensorPin = A1;     // Pino de entrada do sensor de proximidade infravermelho
 const int ledPin = 7;                 // Pino para o LED
+const int ledPin2 = 9; 
 const int buttonPin = 8;              // Pino para o botão
 const int HX711_DT_PIN = 6;           // Pino de dados do módulo HX711
 const int HX711_SCK_PIN = 5;          // Pino de clock do módulo HX711
@@ -23,7 +24,7 @@ bool isRainy = false;
 int proximityCount = 0;
 float weightValue = 0.0;
 bool ledStatus = false;
-float calibration_factor = 1.0;
+float calibration_factor = 910.0;
 
 // Objeto NewPing
 NewPing sonar(ultrasonicTrigPin, ultrasonicEchoPin);
@@ -33,10 +34,12 @@ HX711 scale;
 
 void setup() {
   // Inicialização dos componentes
+  pinMode(rainSensorPin, INPUT);
   pinMode(ultrasonicTrigPin, OUTPUT);
   pinMode(ultrasonicEchoPin, INPUT);
   pinMode(infraredSensorPin, INPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
   pinMode(buttonPin, INPUT_PULLUP);
 
   // Inicialização da conexão Ethernet
@@ -63,12 +66,19 @@ void loop() {
   }
 
   // Verifica o status dos sensores e atualiza as variáveis correspondentes
-  isRainy = (analogRead(rainSensorPin) < 800);  // Altere o valor de referência de acordo com o sensor de chuva utilizado
+  isRainy = (analogRead(rainSensorPin) < 920);  // Altere o valor de referência de acordo com o sensor de chuva utilizado
 
   // Atualiza o valor do peso em gramas
   weightValue = scale.get_units() * 1000.0;     // Valor do peso em gramas
   if (weightValue < 0) {
     weightValue = 0; // Define o valor como zero se for negativo
+  }
+
+  // Lógica para ligar ou desligar o LED com base no status do sensor de chuva
+  if (analogRead(rainSensorPin) < 920) {
+    digitalWrite(ledPin2, HIGH);  // Liga o LED
+  } else {
+    digitalWrite(ledPin2, LOW);   // Desliga o LED
   }
 
   // Conta as detecções do sensor de proximidade infravermelho
@@ -79,6 +89,8 @@ void loop() {
   // Imprime os valores dos sensores na porta serial
   Serial.print("Sensor de Chuva: ");
   Serial.println(isRainy ? "Está molhado!" : "Está seco!");
+  Serial.print("Valor do Sensor de Chuva: ");
+  Serial.println(analogRead(rainSensorPin));
   Serial.print("Sensor de Proximidade Ultrassônico: ");
   Serial.print(getUltrasonicDistance());
   Serial.println(" cm");
@@ -114,6 +126,7 @@ void handleClientRequest(EthernetClient client) {
   // Prepara a resposta para o cliente
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: text/html");
+  client.println("Connection: close");
   client.println();
 
   // Envio do corpo HTML
@@ -121,37 +134,81 @@ void handleClientRequest(EthernetClient client) {
   client.println("<html>");
   client.println("<head>");
   client.println("<meta charset='UTF-8'>");
+  client.println("<meta name='viewport' content='width=device-width, initial-scale=1'>");  // Adiciona a meta tag para tornar a página responsiva
   client.println("<link rel='icon' type='image/png' href='https://blogmasterwalkershop.com.br/arquivos/artigos/sub_wifi/logo_mws.png'/>");
   client.println("<title>Monitoramento apiario</title>");
-  client.println("<style>body{background-color:#ADD8E6; margin:0; padding:20px; font-family: Arial, Helvetica, sans-serif; display:flex; flex-direction:column; align-items:center; text-align:center;} h1{margin-bottom:20px;} p{margin-top:0;}</style>"); // Adiciona estilos CSS inline
+  client.println("<style>");
+  client.println("body {");
+  client.println("  background-color: #ADD8E6;");
+  client.println("  margin: 0;");
+  client.println("  padding: 20px;");
+  client.println("  font-family: Arial, Helvetica, sans-serif;");
+  client.println("  display: flex;");
+  client.println("  flex-direction: column;");
+  client.println("  align-items: center;");
+  client.println("  text-align: center;");
+  client.println("}");
+  client.println(".container {");
+  client.println("  max-width: 600px;");  // Define a largura máxima do contêiner
+  client.println("  margin: 0 auto;");  // Centraliza o contêiner horizontalmente
+  client.println("  background-color: #FFFFFF;");
+  client.println("  padding: 20px;");
+  client.println("  border-radius: 10px;");
+  client.println("}");
+  client.println(".button-group {");
+  client.println("  display: flex;");
+  client.println("  justify-content: center;");
+  client.println("  margin-top: 20px;");
+  client.println("}");
+  client.println(".button-group button {");
+  client.println("  margin: 0 5px;");
+  client.println("  padding: 10px 20px;");  // Altera o tamanho dos botões
+  client.println("  border-radius: 5px;");  // Adiciona a borda arredondada aos botões
+  client.println("  font-size: 16px;");  // Altera o tamanho da fonte dos botões
+  client.println("}");
+  client.println(".ligar-button {");
+  client.println("  background-color: green;");  // Altera a cor de fundo do botão "Ligar" para verde
+  client.println("  color: white;");  // Altera a cor do texto do botão "Ligar" para branco
+  client.println("}");
+  client.println(".desligar-button {");
+  client.println("  background-color: red;");  // Altera a cor de fundo do botão "Desligar" para vermelho
+  client.println("  color: white;");  // Altera a cor do texto do botão "Desligar" para branco
+  client.println("}");
+  client.println("</style>");
   client.println("<meta http-equiv='refresh' content='5'>");  // Atualiza a página a cada 5 segundos
   client.println("</head>");
-  client.println("<body style=background-color:#ADD8E6>");
+  client.println("<body>");
+  client.println("<div class='container'>");  // Abre o contêiner
+
   client.println("<h1>Monitoramento de Sensores</h1>");
   client.println("<h2>Sensor de Chuva:</h2>");
-  client.println(String(rainSensorPin) + " valor");
   client.println(isRainy ? "<p>Está molhado!</p>" : "<p>Está seco!</p>");
+  client.println("<h2>Valor do Sensor de Chuva:</h2>");
+  client.println("<p>" + String(analogRead(rainSensorPin)) + "</p>");
   client.println("<h2>Sensor de Proximidade Ultrassônico:</h2>");
-  client.println(String(getUltrasonicDistance()) + " cm");
-  client.println("<h2>Sensor de Proximidade Infravermelho:</h2>");
-  client.println("<p>Detecções: " + String(proximityCount) + "</p>");
+  client.println("<p>" + String(getUltrasonicDistance()) + " cm</p>");
+  client.println("<h2>Sensor de Proximidade Infravermelho (Detecções):</h2>");
+  client.println("<p>" + String(proximityCount) + "</p>");
   client.println("<h2>Sensor de Peso:</h2>");
   client.println("<p>" + String(weightValue >= 0 ? weightValue : 0) + " g</p>");
+
+  // Botões para ligar ou desligar o LED
   client.println("<h2>Controle do LED:</h2>");
-  client.println("<form method='post' action='/ligar'>");
-  client.println("<input type='submit' value='Ligar'>");
+  client.println("<div class='button-group'>");
+  client.println("<form method='post' action='ligar'>");
+  client.println("<button class='ligar-button' type='submit'>Ligar</button>");  // Adiciona a classe de estilo para o botão "Ligar"
   client.println("</form>");
-  client.println("<form method='post' action='/desligar'>");
-  client.println("<input type='submit' value='Desligar'>");
+  client.println("<form method='post' action='desligar'>");
+  client.println("<button class='desligar-button' type='submit'>Desligar</button>");  // Adiciona a classe de estilo para o botão "Desligar"
   client.println("</form>");
+  client.println("</div>");
+
+  client.println("</div>");  // Fecha o contêiner
   client.println("</body>");
   client.println("</html>");
 }
 
 int getUltrasonicDistance() {
-  unsigned int distance = sonar.ping_cm();
-  if (distance == 0) {
-    distance = 400; // Define um valor máximo caso não seja possível obter a leitura correta
-  }
-  return distance;
+  unsigned int duration = sonar.ping_median(5);  // Realiza 5 medições para obter uma leitura mais precisa
+  return duration / US_ROUNDTRIP_CM;
 }
