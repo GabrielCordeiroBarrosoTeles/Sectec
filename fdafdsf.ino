@@ -9,7 +9,8 @@ const int ultrasonicTrigPin = 2;      // Pino de saída do sinal de disparo do s
 const int ultrasonicEchoPin = 3;      // Pino de entrada do sinal de eco do sensor ultrassônico
 const int infraredSensorPin = A1;     // Pino de entrada do sensor de proximidade infravermelho
 const int ledPin = 7;                 // Pino para o LED
-const int ledPin2 = 9; 
+const int ledPin2 = 8; 
+const int ledPin3_rele = 4; 
 const int buttonPin = 8;              // Pino para o botão
 const int HX711_DT_PIN = 6;           // Pino de dados do módulo HX711
 const int HX711_SCK_PIN = 5;          // Pino de clock do módulo HX711
@@ -24,7 +25,7 @@ bool isRainy = false;
 int proximityCount = 0;
 float weightValue = 0.0;
 bool ledStatus = false;
-float calibration_factor = 910.0;
+float calibration_factor = -353333;
 
 // Objeto NewPing
 NewPing sonar(ultrasonicTrigPin, ultrasonicEchoPin);
@@ -39,7 +40,8 @@ void setup() {
   pinMode(ultrasonicEchoPin, INPUT);
   pinMode(infraredSensorPin, INPUT);
   pinMode(ledPin, OUTPUT);
-  pinMode(ledPin2, OUTPUT);
+  pinMode(ledPin3_rele, OUTPUT);
+    pinMode(ultrasonicTrigPin, OUTPUT);
   pinMode(buttonPin, INPUT_PULLUP);
 
   // Inicialização da conexão Ethernet
@@ -75,10 +77,17 @@ void loop() {
   }
 
   // Lógica para ligar ou desligar o LED com base no status do sensor de chuva
-  if (analogRead(rainSensorPin) < 920) {
+  if (analogRead(rainSensorPin) < 1020) {
     digitalWrite(ledPin2, HIGH);  // Liga o LED
   } else {
     digitalWrite(ledPin2, LOW);   // Desliga o LED
+  }
+
+ // Lógica para ligar ou desligar o LED com base no status do sensor de chuva
+  if (weightValue > 43) {
+    digitalWrite(ledPin3_rele, HIGH);  // Liga o LED
+  } else {
+    digitalWrite(ledPin3_rele, LOW);   // Desliga o LED
   }
 
   // Conta as detecções do sensor de proximidade infravermelho
